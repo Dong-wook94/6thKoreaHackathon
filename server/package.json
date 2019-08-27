@@ -8,11 +8,18 @@
   },
   "keywords": [],
   "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Dong-Wook94/6thKoreaHackathon.git"
+  },
   "license": "ISC",
   "dependencies": {
-      "mysql":"*",
-      "express": "*",
-      "ejs": "*",
-      "rosnodejs": "*"
+    "mysql": "*",
+    "express": "*",
+    "ejs": "*",
+    "rosnodejs": "*",
+    "body-parser": "*",
+    "firebase-admin": "*",
+    "firebase-tools": "*"
   }
 }
