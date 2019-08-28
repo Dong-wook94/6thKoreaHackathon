@@ -20,6 +20,8 @@
     "rosnodejs": "*",
     "body-parser": "*",
     "firebase-admin": "*",
-    "firebase-tools": "*"
+    "firebase-tools": "*",
+    "fcm-node": "*",
+    "websocket": "*"
   }
 }
