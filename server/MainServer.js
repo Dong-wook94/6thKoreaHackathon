@@ -5,9 +5,8 @@ var admin = require("firebase-admin");
 var FCM = require('fcm-node');
 var serverKey = 'AAAA8HdkNFQ:APA91bFYeDtX4eo0UOkZpqX3xuj7j7figjBAOQGAT8HkgEvLFBjP2HKOYgCbI8GU1PxcKHHCi_8iU1N1SJyIiPFrO7K5hXLF6K716L3x9YsQ2YhtNI70eldNMtNI8CkF-4jQHIQcit62';
 var serviceAccount = require("./chimchakae-1eb6bc4fce0a.json");
-var client_token="c22xzlG7Gf4:APA91bGICoKporconuZGb2oJCQiImL50IrpxH7eoeKLmQWAgPQxZYIsnarQQTAW25SX5Rnysm19oZzQuJrkqJ8GW38Z_N-E07Kg2u30j65WNXnGeWMYs_rOZbbnQMmP2XRGvsn7yFkso";
 
-var msg_data = require('./module/fcm');
+//var msg_data = require('./module/fcm');
 
 var Client = [];
 
@@ -147,6 +146,12 @@ wsServer.on('request', function (request) {
                 }
                 //console.log(msgdata);
             }
+            else if (parsed_msg[0]=="car_num"){
+                car_num = parsed_msg[1];
+                console.log("차번호 : "+car_num);
+                send_fcm(car_num,"차연결","차연결성공");
+            }
+
         }
 
         else if (message.type === 'binary') {
