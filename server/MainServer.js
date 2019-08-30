@@ -9,7 +9,8 @@ var serviceAccount = require("./chimchakae-1eb6bc4fce0a.json");
 //var msg_data = require('./module/fcm');
 
 var Client = [];
-
+var Followers = new Set();
+var ROS_conn = "";
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://chimchakae.firebaseio.com"
@@ -38,7 +39,7 @@ ref.on("value", function(snapshot) {
 
 
 
-function MsgData (_token,_title,_body){
+function MsgData (_token,_title,_body,_click_action){
     this._title = _title;
     this._body = _body;
     
@@ -50,7 +51,7 @@ function MsgData (_token,_title,_body){
               title: this._title,
               body: this._body,
               sound: "default",
-              click_action: "FCM_PLUGIN_ACTIVITY",
+              click_action: _click_action,
               icon: "fcm_push_icon"
           },
           // 메시지 중요도
@@ -93,12 +94,22 @@ function originIsAllowed(origin) {
     // put logic here to detect whether the specified origin is allowed.
     return true;
 }
-function send_fcm(_carNum,_title,_body){
+function send_fcm(info,type,_title,_body,_click_action,info){
     var query = db.ref("users");
     query.once("value").then(function(snapshot){
         snapshot.forEach(function(childSnapshot){
-            if(_carNum=="all"||_carNum==childSnapshot.child("carNum").val()){
-                msgdata = new MsgData (childSnapshot.child("deviceToken").val(),_title,_body);
+            if(type =="userID"){
+                if(info=="all"||info==childSnapshot.child("userId").val()){
+                    console.log("userID 버전 전송");
+                    msgdata = new MsgData (childSnapshot.child("deviceToken").val(),_title,_body,_click_action);
+            }
+            else if(type =="carNum"){
+                if(info=="all"||info==childSnapshot.child("carNum").val()){
+                    console.log("carNum 버전 전송");
+                    msgdata = new MsgData (childSnapshot.child("deviceToken").val(),_title,_body,_click_action);
+                }
+            }
+           
             fcm.send(msgdata.getData(), function(err, response) {
                 if (err) {
                     //console.log(client_token);
@@ -134,22 +145,52 @@ wsServer.on('request', function (request) {
             var received_msg= message.utf8Data;
             console.log('Received Message: ' + received_msg + "address : " + connection.remoteAddress);
             var parsed_msg = received_msg.split(': ');
-            console.log(parsed_msg[0]);
-            console.log(parsed_msg[1]);
+            console.log(parsed_msg);
+            //console.log(parsed_msg[1]);
             if(parsed_msg[0]=="level_alert"){
                 var msgdata="";
                 if(parsed_msg[1]==1){//수위 높을때
-                    send_fcm("all","수위높음","수위가 높습니다.");
+                    send_fcm("all","carNum","수위높음","수위가 높습니다.",".AlertActivity");
                 }
                 else{//수위 낮을때
-                    send_fcm("all","수위낮음","안전한 지역입니다.");
+                    send_fcm("all","carNum","수위낮음","안전한 지역입니다.",".MainActivity");
+                    if(ROS_conn!=""){
+                        send_fcm(car_num,"carNum","차연결","차연결해제",".MainActivity");
+                        ROS_conn.sendUTF("0");
+                        console.log("메시지 전송 : 0");
+                    }
                 }
                 //console.log(msgdata);
             }
             else if (parsed_msg[0]=="car_num"){
                 car_num = parsed_msg[1];
                 console.log("차번호 : "+car_num);
-                send_fcm(car_num,"차연결","차연결성공");
+                send_fcm(car_num,"carNum","차연결","차연결성공",".MainActivity");
+                if(ROS_conn!=""){
+                    ROS_conn.sendUTF("1");
+                    console.log("메시지 전송 : 1");
+                }
+                
+            }
+            else if (parsed_msg[0]=="ros"){
+                ROS_conn = connection;
+                console.log("ros 서버 연결");
+            }
+            else if (parsed_msg[0]=="android"){
+                //parsed_msg[1] : userID
+                if(parsed_msg[2] == "F"){
+                    Followers.add(parsed_msg[1]);
+                    var followersRef = db.ref("followers").push();
+                    followersRef.set({
+                        userID : parsed_msg[1]
+                    });
+                    console.log(parsed_msg[1] + " Follow 등록");
+                    console.log("Followers 출력");
+                    console.log(Followers);
+                }
+                else if(parsed_msg[2] == "C"){
+                    console.log(parsed_msg[1] + " Carrier 등록");
+                }
             }
 
         }
