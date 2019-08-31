@@ -3,6 +3,7 @@ var WebSocketServer = require('websocket').server;
 var http = require('http');
 var admin = require("firebase-admin");
 var FCM = require('fcm-node');
+var async = require('async');
 var serverKey = 'AAAA8HdkNFQ:APA91bFYeDtX4eo0UOkZpqX3xuj7j7figjBAOQGAT8HkgEvLFBjP2HKOYgCbI8GU1PxcKHHCi_8iU1N1SJyIiPFrO7K5hXLF6K716L3x9YsQ2YhtNI70eldNMtNI8CkF-4jQHIQcit62';
 var serviceAccount = require("./chimchakae-1eb6bc4fce0a.json");
 
@@ -18,6 +19,26 @@ admin.initializeApp({
 
 var db = admin.database();
 var ref = db.ref("users");
+
+var f_ref = db.ref("followers");//follow 추가시
+f_ref.on("child_added", function(snapshot, prevChildKey) {
+    var newPost = snapshot.val();
+    f_ref.once("value").then( function(Dsnapshot){
+        Dsnapshot.forEach( function(childSnapshot){
+            console.log("추가된것"+childSnapshot.key);
+            if(newPost.userID ==childSnapshot.child("userID").val()){
+               if(snapshot.key !=childSnapshot.key){
+                var d_ref = db.ref("followers/"+childSnapshot.key);
+                d_ref.set(null);
+               }
+            }
+            
+        });
+    });
+    //console.log("carNum: " + newPost.carNum);
+    //console.log("userID: " + newPost.userID);
+  });
+
 ref.on("value", function(snapshot) {
     console.log("----------전체 회원----------");
     console.log("전체 회원수 : "+snapshot.numChildren());
@@ -127,7 +148,20 @@ function send_fcm(info,type,_title,_body,_click_action,info){
    
     console.log(_title);
 }
+function check_firebase(userID,carNum){    
+    return [userID,carNum];
+}
 
+function firebase_update(userID,carNum){
+   
+  
+    var followersRef = db.ref("followers").push();
+    followersRef.set({
+    userID : userID,
+    carNum : carNum
+    });
+
+}
 wsServer.on('request', function (request) {
     if (!originIsAllowed(request.origin)) {
         // Make sure we only accept requests from an allowed origin
@@ -178,17 +212,13 @@ wsServer.on('request', function (request) {
             }
             else if (parsed_msg[0]=="android"){
                 //parsed_msg[1] : userID
-                if(parsed_msg[2] == "F"){
-                    Followers.add(parsed_msg[1]);
-                    var followersRef = db.ref("followers").push();
-                    followersRef.set({
-                        userID : parsed_msg[1]
-                    });
+                if(parsed_msg[3] == "F"){
                     console.log(parsed_msg[1] + " Follow 등록");
-                    console.log("Followers 출력");
-                    console.log(Followers);
+
+                    firebase_update(parsed_msg[1],parsed_msg[2]);
+                    
                 }
-                else if(parsed_msg[2] == "C"){
+                else if(parsed_msg[3] == "C"){
                     console.log(parsed_msg[1] + " Carrier 등록");
                 }
             }
